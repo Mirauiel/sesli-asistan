@@ -14,7 +14,8 @@ Proje; hız, gizlilik ve düşük kaynak kullanımı (CPU Optimization) odaklı 
 
 ## 🏗️ Proje Mimarisi
 
-[ Kullanıcı ]
+```text
+    [ Kullanıcı ]
          │
     (Sesli Komut)
          ▼
@@ -29,18 +30,22 @@ Proje; hız, gizlilik ve düşük kaynak kullanımı (CPU Optimization) odaklı 
                                           ▼
                                  [ İşletim Sistemi ]
                                  (Hesap Makinesi, Tarayıcı vb.)
+```
 
 🛠️ Kurulum ve Çalıştırma
 Bu projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları izleyin.
 
 1. Projeyi Klonlayın
 
-git clone [https://github.com/Mirauiel/sesli-asistan.git](https://github.com/Mirauiel/sesli-asistan.git)
+git clone https://github.com/Mirauiel/sesli-asistan.git
+
 cd sesli-asistan
 
 2. Sanal Ortamı Kurun (Tavsiye Edilen)
+Kütüphanelerin sisteminizi etkilememesi için sanal ortam oluşturun:
 
 python3 -m venv venv
+
 source venv/bin/activate
 
 3. Gerekli Paketleri Yükleyin
@@ -48,13 +53,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 Not: Linux kullanıcıları için ses işleme aracı gerekebilir:
+
 sudo apt install ffmpeg libespeak1
 
 4. Asistanı Başlatın 🚀
 
 python3 server.py
 
-Terminalde Uvicorn running on http://0.0.0.0:8000 yazısını gördüğünüzde tarayıcınızdan http://localhost:8000 adresine gidin.
+erminalde Uvicorn running on http://0.0.0.0:8000 yazısını gördüğünüzde tarayıcınızdan http://localhost:8000 adresine gidin.
 
 🔮 Gelecek Planları (Roadmap)
 [ ] Cross-Platform: Hem Windows hem Linux tam uyumluluğu.
