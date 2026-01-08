@@ -60,7 +60,7 @@ sudo apt install ffmpeg libespeak1
 
 python3 server.py
 
-erminalde Uvicorn running on http://0.0.0.0:8000 yazısını gördüğünüzde tarayıcınızdan http://localhost:8000 adresine gidin.
+Terminalde Uvicorn running on http://0.0.0.0:8000 yazısını gördüğünüzde tarayıcınızdan http://localhost:8000 adresine gidin.
 
 🔮 Gelecek Planları (Roadmap)
 [ ] Cross-Platform: Hem Windows hem Linux tam uyumluluğu.
