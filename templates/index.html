@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sesli Asistan v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col items-center justify-center font-sans">
+
+    <div class="w-full max-w-2xl bg-gray-800 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+        
+        <div class="bg-indigo-600 p-4 text-center font-bold text-xl shadow-md">
+            Yapay Zeka Asistanı
+        </div>
+
+        <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-700">
+            <div class="flex justify-start">
+                <div class="bg-gray-600 p-3 rounded-lg rounded-tl-none max-w-xs">
+                    Merhaba Utku! Seni dinlemeye hazırım.
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 bg-gray-800 border-t border-gray-600 flex justify-center items-center">
+            <button id="listen-btn" onclick="toggleListening()" 
+                class="bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all transform hover:scale-105">
+                <i class="fas fa-microphone text-2xl"></i>
+            </button>
+            <p id="status-text" class="ml-4 text-gray-400 text-sm">Dokun ve Konuş...</p>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8000/ws");
+        const chatBox = document.getElementById("chat-box");
+        const statusText = document.getElementById("status-text");
+        const btn = document.getElementById("listen-btn");
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === "user") {
+                addMessage(data.text, "end", "indigo-500");
+                statusText.innerText = "İşleniyor...";
+            } else if (data.type === "bot") {
+                addMessage(data.text, "start", "gray-600");
+                statusText.innerText = "Dokun ve Konuş...";
+                btn.classList.remove("animate-pulse");
+            } else if (data.type === "info") {
+                statusText.innerText = data.text;
+            }
+        };
+
+        function toggleListening() {
+            btn.classList.add("animate-pulse");
+            statusText.innerText = "Dinleniyor...";
+            ws.send("start_listening");
+        }
+
+        function addMessage(text, align, color) {
+            const div = document.createElement("div");
+            div.className = `flex justify-${align}`;
+            div.innerHTML = `<div class="bg-${color} p-3 rounded-lg text-white max-w-xs shadow-md">${text}</div>`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
