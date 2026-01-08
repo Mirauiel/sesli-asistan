@@ -38,20 +38,52 @@
         const statusText = document.getElementById("status-text");
         const btn = document.getElementById("listen-btn");
 
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === "user") {
-                addMessage(data.text, "end", "indigo-500");
-                statusText.innerText = "İşleniyor...";
-            } else if (data.type === "bot") {
-                addMessage(data.text, "start", "gray-600");
-                statusText.innerText = "Dokun ve Konuş...";
-                btn.classList.remove("animate-pulse");
-            } else if (data.type === "info") {
-                statusText.innerText = data.text;
-            }
-        };
+	// Mesaj Geldiğinde (Güncellenmiş Tam Kod)
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const chatBox = document.getElementById("chat-box");
+
+                // 1. Kullanıcı Mesajı
+                if (data.type === "user") {
+                    chatBox.innerHTML += `<div class="message user-message">${data.text}</div>`;
+                } 
+                // 2. Bot Mesajı
+                else if (data.type === "bot") {
+                    chatBox.innerHTML += `<div class="message bot-message">${data.text}</div>`;
+                } 
+                // 3. Bilgi Mesajı (Dinliyorum...)
+                else if (data.type === "info") {
+                    const status = document.getElementById("status");
+                    status.innerText = data.text;
+                    status.style.color = "#f39c12";
+                    
+                    // 3 saniye sonra 'Hazır'a dön
+                    setTimeout(() => {
+                        status.innerText = "Hazır";
+                        status.style.color = "#2ecc71";
+                    }, 3000);
+                }
+                // 4. Arama Sonuçları (YENİ KART TASARIMI)
+                else if (data.type === "search_results") {
+                    let cardsHtml = '<div class="search-container" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';
+                    
+                    data.data.forEach(item => {
+                        cardsHtml += `
+                            <div class="search-card" style="background:#2c3e50; padding:10px; border-radius:8px; width:100%; max-width:250px; border:1px solid #34495e;">
+                                <h4 style="margin:0 0 5px 0; color:#3498db; font-size:14px;">${item.title}</h4>
+                                <p style="font-size:11px; color:#bdc3c7; margin-bottom:5px;">${item.desc ? item.desc.substring(0, 60) + '...' : 'Açıklama yok'}</p>
+                                <a href="${item.url}" target="_blank" style="color:#2ecc71; text-decoration:none; font-size:12px; font-weight:bold;">🔗 Siteye Git</a>
+                            </div>
+                        `;
+                    });
+                    
+                    cardsHtml += '</div>';
+                    chatBox.innerHTML += cardsHtml;
+                }
+
+                // Otomatik aşağı kaydır
+                chatBox.scrollTop = chatBox.scrollHeight;
+            };
 
         function toggleListening() {
             btn.classList.add("animate-pulse");

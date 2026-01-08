@@ -1,75 +1,104 @@
-from fastapi import FastAPI, WebSocket, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 import uvicorn
-import subprocess
+from fastapi import FastAPI, WebSocket
+from fastapi.responses import HTMLResponse
+import sqlite3
+import json
 from faster_whisper import WhisperModel
 import speech_recognition as sr
-from gtts import gTTS
-from playsound3 import playsound
 import os
-import asyncio
-import sqlite3
-import datetime
+import time
+import platform
+import subprocess
+import webbrowser
+from duckduckgo_search import DDGS  # YENİ: DuckDuckGo Kütüphanesi
 
-# --- AYARLAR ---
+# --- 1. AYARLAR VE MODEL YÜKLEME ---
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
-MODEL_SIZE = "small"
 
-print("Model yükleniyor...")
-model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
-print("Model hazır!")
+# İşletim Sistemi Tespiti
+CURRENT_OS = platform.system()
+print(f"🖥️  Algılanan İşletim Sistemi: {CURRENT_OS}")
 
-# --- VERİTABANI BAĞLANTISI ---
-conn = sqlite3.connect("asistan_logs.db", check_same_thread=False)
+# Veritabanı Bağlantısı
+conn = sqlite3.connect("asistan.db")
 cursor = conn.cursor()
 cursor.execute("""
-    CREATE TABLE IF NOT EXISTS konusma_gecmisi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tarih TEXT,
-        komut TEXT,
-        cevap TEXT
-    )
+CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_text TEXT,
+    bot_response TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
 """)
 conn.commit()
 
-def log_to_db(komut, cevap):
-    """Konuşmayı veritabanına kaydeder"""
-    zaman = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("INSERT INTO konusma_gecmisi (tarih, komut, cevap) VALUES (?, ?, ?)", (zaman, komut, cevap))
+# Whisper Modelini Yükle (Int8 - CPU Optimize)
+print("📥 Model yükleniyor (small, int8)...")
+model = WhisperModel("small", device="cpu", compute_type="int8")
+print("✅ Model hazır!")
+
+# --- 2. YARDIMCI FONKSİYONLAR ---
+
+def log_to_db(user_text, bot_response):
+    """Konuşmayı veritabanına kaydeder."""
+    cursor.execute("INSERT INTO logs (user_text, bot_response) VALUES (?, ?)", (user_text, bot_response))
     conn.commit()
 
-def speak(text):
-    """Metni sese çevirir"""
+def open_application(app_name):
+    """İşletim sistemine göre doğru uygulamayı açar."""
     try:
-        tts = gTTS(text=text, lang='tr')
-        filename = "yanit.mp3"
-        if os.path.exists(filename): os.remove(filename)
-        tts.save(filename)
-        playsound(filename)
-    except:
-        pass
+        if CURRENT_OS == "Windows":
+            if app_name == "hesap_makinesi":
+                subprocess.Popen("calc.exe")
+            elif app_name == "notepad":
+                subprocess.Popen("notepad.exe")
+            
+        elif CURRENT_OS == "Linux":
+            if app_name == "hesap_makinesi":
+                subprocess.Popen(["gnome-calculator"])
+            elif app_name == "gedit":
+                subprocess.Popen(["gedit"])
+        
+        return True
+    except Exception as e:
+        print(f"❌ Uygulama açma hatası: {e}")
+        return False
 
 def listen_mic():
-    """Mikrofonu dinler"""
+    """Mikrofonu dinler ve sesi metne çevirir."""
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        r.adjust_for_ambient_noise(source, duration=0.5)
+        r.adjust_for_ambient_noise(source, duration=1)
+        print("🎤 Dinliyorum...")
+        
         try:
-            audio = r.listen(source, timeout=5, phrase_time_limit=5)
+            audio = r.listen(source, timeout=5, phrase_time_limit=10)
+            print("⏳ İşleniyor...")
+            
             with open("temp.wav", "wb") as f:
                 f.write(audio.get_wav_data())
+            
             segments, _ = model.transcribe("temp.wav", beam_size=5, language="tr")
-            return "".join([s.text for s in segments]).strip().lower()
-        except:
-            return ""
+            text = " ".join([segment.text for segment in segments])
+            
+            if os.path.exists("temp.wav"):
+                os.remove("temp.wav")
+                
+            return text
 
-# --- ENDPOINTLER ---
+        except sr.WaitTimeoutError:
+            print("timeout")
+            return None
+        except Exception as e:
+            print(f"Hata: {e}")
+            return None
 
-@app.get("/", response_class=HTMLResponse)
-async def get(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+# --- 3. ANA SUNUCU (WEBSOCKET) ---
+
+@app.get("/")
+async def get():
+    with open("templates/index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -80,43 +109,83 @@ async def websocket_endpoint(websocket: WebSocket):
         
         if data == "start_listening":
             await websocket.send_json({"type": "info", "text": "Dinliyorum..."})
+            
             text = listen_mic()
             
             if text:
+                print(f"👤 Kullanıcı: {text}")
                 await websocket.send_json({"type": "user", "text": text})
                 
                 response_text = ""
+                text_lower = text.lower()
                 
-                # --- KOMUTLAR ---
-                if "hesap makinesi" in text:
-                    response_text = "Hesap makinesini açıyorum."
-                    subprocess.Popen(['gnome-calculator'])
+                # --- AKILLI KOMUT MERKEZİ ---
                 
-                elif "sistem durumu" in text or "bilgisayar nasıl" in text:
-                    # Linux'ta yük durumunu okuma
-                    load1, load5, load15 = os.getloadavg()
-                    response_text = f"İşlemci yükü şu an yüzde {int(load1 * 100)} seviyesinde. Sistem stabil."
+                # 1. Uygulama Açma Komutları
+                if "hesap makinesi" in text_lower:
+                    success = open_application("hesap_makinesi")
+                    response_text = "Hesap makinesini açıyorum." if success else "Uygulamayı bulamadım."
+                
+                elif "not defteri" in text_lower or "notepad" in text_lower:
+                    if CURRENT_OS == "Windows":
+                        open_application("notepad")
+                    else:
+                        open_application("gedit")
+                    response_text = "Not defterini açıyorum."
 
-                elif "nasılsın" in text:
-                    response_text = "İyiyim, tüm servislerim aktif."
+                # 2. İnternet Araması (DuckDuckGo - Güvenli ve Hızlı)
+                elif "ara" in text_lower or "bul" in text_lower:
+                    search_query = text_lower.replace("ara", "").replace("bul", "").replace("bana", "").strip()
                     
-                elif "saat kaç" in text:
-                    now = datetime.datetime.now().strftime("%H:%M")
+                    if search_query:
+                        response_text = f"🦆 DuckDuckGo'da '{search_query}' aranıyor..."
+                        await websocket.send_json({"type": "bot", "text": response_text})
+                        
+                        results = []
+                        try:
+                            # DuckDuckGo ile arama yap
+                            ddgs = DDGS()
+                            # max_results=3 ile ilk 3 sonucu al
+                            ddg_results = ddgs.text(search_query, max_results=3)
+                            
+                            for r in ddg_results:
+                                results.append({
+                                    "title": r['title'],
+                                    "url": r['href'],
+                                    "desc": r['body']
+                                })
+                            
+                            if not results:
+                                response_text = "Maalesef sonuç bulamadım."
+                            else:
+                                await websocket.send_json({"type": "search_results", "data": results})
+                            
+                        except Exception as e:
+                            print(f"Arama hatası: {e}")
+                            await websocket.send_json({"type": "bot", "text": "Arama sırasında bağlantı hatası oluştu."})
+                            
+                    else:
+                        response_text = "Ne aramam gerektiğini anlamadım."
+                        await websocket.send_json({"type": "bot", "text": response_text})
+
+                # 3. Sohbet / Durum
+                elif "nasılsın" in text_lower:
+                    response_text = "Sistemlerim %100 çalışıyor, teşekkürler!"
+                elif "saat kaç" in text_lower:
+                    from datetime import datetime
+                    now = datetime.now().strftime("%H:%M")
                     response_text = f"Saat şu an {now}"
-                    
-                else:
-                    response_text = "Bunu tam anlayamadım, tekrar eder misin?"
-
-                # --- CEVAP VE LOGLAMA ---
-                # 1. Veritabanına kaydet
-                log_to_db(text, response_text)
                 
-                # 2. Arayüze gönder ve seslendir
-                await websocket.send_json({"type": "bot", "text": response_text})
-                speak(response_text)
-            else:
-                await websocket.send_json({"type": "info", "text": "Ses algılanamadı."})
-                await websocket.send_json({"type": "bot", "text": "Bir şey duyamadım."})
+                else:
+                    response_text = "Bunu henüz öğrenmedim ama kaydediyorum."
 
+                # Cevabı Gönder ve Kaydet (Arama kartı gönderilmediyse)
+                if response_text and not response_text.startswith("🦆"):
+                    log_to_db(text, response_text)
+                    await websocket.send_json({"type": "bot", "text": response_text})
+
+# --- 4. BAŞLATMA ---
 if __name__ == "__main__":
+    import uvicorn
+    print("🚀 Sunucu başlatılıyor: http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
