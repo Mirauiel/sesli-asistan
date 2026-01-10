@@ -1,77 +1,50 @@
-# 🎙️ Türkçe Yapay Zeka Sesli Asistan (Local AI Assistant)
+# 🧠 Yerel Sesli Yapay Zeka Asistanı (Jarvis Clone)
 
-Bu proje, Python kullanılarak geliştirilmiş, **internet bağlantısına ihtiyaç duymadan (offline)** çalışabilen ve modern bir web arayüzü üzerinden kontrol edilen akıllı bir sesli asistandır.
+Bu proje, tamamen **Offline (İnternetsiz)** ve **Yerel** kaynaklarla çalışan, sesli komutları algılayan, internette arama yapabilen ve LLM (Büyük Dil Modeli) ile sohbet edebilen modern bir asistan uygulamasıdır.
 
-Proje; hız, gizlilik ve düşük kaynak kullanımı (CPU Optimization) odaklı tasarlanmıştır.
+![Python](https://img.shields.io/badge/Python-3.10-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-Modern-green) ![Ollama](https://img.shields.io/badge/AI-Ollama-orange)
 
-## 🌟 Öne Çıkan Özellikler
+## 🚀 Özellikler
 
-* **⚡ Yüksek Performanslı STT:** `Faster-Whisper` modeli kullanılarak ve `int8 quantization` optimizasyonu yapılarak, GPU gerektirmeden CPU üzerinde şimşek hızında "Sesten Yazıya" çeviri.
-* **🌐 Modern Mimari:** `FastAPI` ve `WebSocket` teknolojileri sayesinde "Request-Response" beklemesi olmadan gerçek zamanlı (Real-time) iletişim.
-* **🔒 Tam Gizlilik:** Ses verileri dışarıya (Google/Amazon sunucularına) gönderilmez, tamamen yerel makinenizde işlenir.
-* **💾 Akıllı Hafıza:** SQLite veritabanı entegrasyonu ile tüm konuşma geçmişini loglar ve hatırlar.
-* **🖥️ Sistem Kontrolü:** İşletim sistemi komutlarını (Hesap makinesi açma, sistem durumu sorgulama vb.) sesle yönetebilme.
+* **🗣️ Ses Algılama (STT):** `Faster-Whisper` modeli ile (int8 quantization) işlemci dostu, yüksek doğruluklu Türkçe ses tanıma.
+* **🧠 Yapay Zeka Beyni (LLM):** `Ollama` üzerinden çalışan **Qwen 2.5 (3B)** modeli ile mantıklı sohbet yeteneği ve kod yazma desteği.
+* **🔊 Sesli Cevap (TTS):** Asistanın cevaplarını `gTTS` ve `mpg123` optimizasyonu ile takılmadan seslendirme.
+* **🌐 İnternet Araması:** DuckDuckGo API ile anlık bilgi çekme ve kartlar halinde gösterme.
+* **💻 Sistem Kontrolü:** Hesap makinesi, not defteri gibi uygulamaları sesle açabilme.
+* **🎨 Modern Arayüz:** WebSocket tabanlı, gecikmesiz (real-time) akan sohbet ekranı (HTML/JS).
 
-## 🏗️ Proje Mimarisi
+## 🛠️ Kurulum
 
-```text
-    [ Kullanıcı ]
-         │
-    (Sesli Komut)
-         ▼
-[ Web Arayüzü ] <─── WebSocket ───> [ Server (FastAPI) ]
-                                          │    │
-                                          │    ├───> [ Faster-Whisper AI ]
-                                          │    │     (Sesi Yazıya Çevir)
-                                          │    │
-                                          │    └───> [ SQLite Veritabanı ]
-                                          │          (Loglama Yap)
-                                          │
-                                          ▼
-                                 [ İşletim Sistemi ]
-                                 (Hesap Makinesi, Tarayıcı vb.)
-```
+1.  **Gereksinimleri Yükleyin:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-🛠️ Kurulum ve Çalıştırma
-Bu projeyi kendi bilgisayarınızda çalıştırmak için aşağıdaki adımları izleyin.
+2.  **Sistem Paketlerini Kurun (Linux):**
+    ```bash
+    sudo apt install mpg123
+    ```
 
-1. Projeyi Klonlayın
+3.  **Ollama ve Modeli Kurun:**
+    * [Ollama](https://ollama.com) indirin.
+    * Modeli çekin: `ollama run qwen2.5:3b`
 
-git clone https://github.com/Mirauiel/sesli-asistan.git
+## ▶️ Kullanım
 
-cd sesli-asistan
+Uygulamayı başlatmak için tek komut yeterlidir:
 
-2. Sanal Ortamı Kurun (Tavsiye Edilen)
-Kütüphanelerin sisteminizi etkilememesi için sanal ortam oluşturun:
+```bash
+python3 main.py
 
-python3 -m venv venv
+Tarayıcınızda http://localhost:8000 adresine gidin ve mikrofon butonuna basın.
 
-source venv/bin/activate
+🏗️ Mimari
+Backend: Python FastAPI (WebSocket)
 
-3. Gerekli Paketleri Yükleyin
+Frontend: HTML5, CSS3, Vanilla JS
 
-pip install -r requirements.txt
+AI Engine: Ollama (Local LLM)
 
-Not: Linux kullanıcıları için ses işleme aracı gerekebilir:
+Database: SQLite (Sohbet geçmişi logları için)
 
-sudo apt install ffmpeg libespeak1
-
-4. Asistanı Başlatın 🚀
-
-python3 server.py
-
-Terminalde Uvicorn running on http://0.0.0.0:8000 yazısını gördüğünüzde tarayıcınızdan http://localhost:8000 adresine gidin.
-
-🔮 Gelecek Planları (Roadmap)
-[ ] Cross-Platform: Hem Windows hem Linux tam uyumluluğu.
-
-[ ] LLM Entegrasyonu: Gemini/GPT veya Local LLM (Llama) ile doğal sohbet yeteneği.
-
-[ ] Web Scraping: "Yemek tarifi bul" dendiğinde internetten veriyi çekip okuma.
-
-[ ] IoT Kontrolü: Akıllı ev aletleri entegrasyonu.
-
-🤝 İletişim & Geliştirici
-Geliştirici: Utku Kalender (Mirauiel)
-
-Bu proje, Bilgisayar Mühendisliği çalışmaları kapsamında geliştirilmektedir.
+Geliştirici: Utku Kalender
