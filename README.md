@@ -1,50 +1,47 @@
-# 🧠 Yerel Sesli Yapay Zeka Asistanı (Jarvis Clone)
+k# 🧠 Jarvis AI Asistan (Python + Local LLM)
 
-Bu proje, tamamen **Offline (İnternetsiz)** ve **Yerel** kaynaklarla çalışan, sesli komutları algılayan, internette arama yapabilen ve LLM (Büyük Dil Modeli) ile sohbet edebilen modern bir asistan uygulamasıdır.
-
-![Python](https://img.shields.io/badge/Python-3.10-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-Modern-green) ![Ollama](https://img.shields.io/badge/AI-Ollama-orange)
+Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), sesli komutları algılayan ve Qwen 2.5 yapay zeka modelini kullanan modüler bir asistandır.
 
 ## 🚀 Özellikler
+- **Yerel LLM:** Ollama üzerinden Qwen 2.5 (3B) modeli ile Türkçe sohbet.
+- **Sesli Etkileşim:** `Faster-Whisper` ile duyma, `gTTS/mpg123` ile konuşma.
+- **Modüler Mimari:** Kolay geliştirilebilir parça parça yapı (Core, Audio, LLM).
+- **Sistem Kontrolü:** Hesap makinesi açma, internet araması yapma (DuckDuckGo).
+- **Web Arayüzü:** WebSocket tabanlı modern sohbet ekranı.
 
-* **🗣️ Ses Algılama (STT):** `Faster-Whisper` modeli ile (int8 quantization) işlemci dostu, yüksek doğruluklu Türkçe ses tanıma.
-* **🧠 Yapay Zeka Beyni (LLM):** `Ollama` üzerinden çalışan **Qwen 2.5 (3B)** modeli ile mantıklı sohbet yeteneği ve kod yazma desteği.
-* **🔊 Sesli Cevap (TTS):** Asistanın cevaplarını `gTTS` ve `mpg123` optimizasyonu ile takılmadan seslendirme.
-* **🌐 İnternet Araması:** DuckDuckGo API ile anlık bilgi çekme ve kartlar halinde gösterme.
-* **💻 Sistem Kontrolü:** Hesap makinesi, not defteri gibi uygulamaları sesle açabilme.
-* **🎨 Modern Arayüz:** WebSocket tabanlı, gecikmesiz (real-time) akan sohbet ekranı (HTML/JS).
+## 📂 Proje Yapısı (Modüler)
+```text
+📁 asistan_proje/
+├── 📄 main.py          # Orkestra Şefi (Sistemi Başlatır)
+├── 📄 config.py        # Tüm Ayarlar (Model, Yollar)
+├── 📂 core/            # Sistemin Beyni ve Organları
+│   ├── 📄 llm.py       # Yapay Zeka Entegrasyonu (Ollama)
+│   ├── 📄 audio.py     # Ses İşleme (STT / TTS)
+│   ├── 📄 system.py    # PC Kontrol & Araçlar
+│   └── 📄 memory.py    # Hafıza Sistemi (Geliştirme Aşamasında)
+└── 📂 templates/       # HTML Arayüzü
 
-## 🛠️ Kurulum
 
-1.  **Gereksinimleri Yükleyin:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+🛠️ Kurulum & Çalıştırma
 
-2.  **Sistem Paketlerini Kurun (Linux):**
-    ```bash
-    sudo apt install mpg123
-    ```
+1 - Gereksinimleri Yükle:
 
-3.  **Ollama ve Modeli Kurun:**
-    * [Ollama](https://ollama.com) indirin.
-    * Modeli çekin: `ollama run qwen2.5:3b`
+pip install -r requirements.txt
 
-## ▶️ Kullanım
+sudo apt install portaudio19-dev mpg123
 
-Uygulamayı başlatmak için tek komut yeterlidir:
+2 - Ollama Motorunu Başlat:
 
-```bash
+ollama serve
+
+3 - Asistanı Çalıştır:
+
 python3 main.py
 
-Tarayıcınızda http://localhost:8000 adresine gidin ve mikrofon butonuna basın.
+⚠️ Gereksinimler
 
-🏗️ Mimari
-Backend: Python FastAPI (WebSocket)
+Linux (Tercihen Ubuntu/Pop!_OS)
 
-Frontend: HTML5, CSS3, Vanilla JS
+Python 3.10+
 
-AI Engine: Ollama (Local LLM)
-
-Database: SQLite (Sohbet geçmişi logları için)
-
-Geliştirici: Utku Kalender
+Min 8GB RAM (Qwen 2.5 için)
