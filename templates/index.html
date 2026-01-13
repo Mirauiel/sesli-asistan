@@ -52,17 +52,16 @@
                     chatBox.innerHTML += `<div class="message bot-message">${data.text}</div>`;
                 } 
                 // 3. Bilgi Mesajı (Dinliyorum...)
-                else if (data.type === "info") {
-                    const status = document.getElementById("status");
-                    status.innerText = data.text;
-                    status.style.color = "#f39c12";
-                    
-                    // 3 saniye sonra 'Hazır'a dön
-                    setTimeout(() => {
-                        status.innerText = "Hazır";
-                        status.style.color = "#2ecc71";
-                    }, 3000);
-                }
+		else if (data.type === "info") {
+			const statusText = document.getElementById("status-text"); // DOĞRUSU BU
+			statusText.innerText = data.text;
+			statusText.classList.add("text-yellow-400"); // Tailwind rengi kullanalım
+
+			setTimeout(() => {
+				statusText.innerText = "Dokun ve Konuş...";
+				statusText.classList.remove("text-yellow-400");
+			}, 3000);
+		}
                 // 4. Arama Sonuçları (YENİ KART TASARIMI)
                 else if (data.type === "search_results") {
                     let cardsHtml = '<div class="search-container" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';

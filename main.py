@@ -2,19 +2,22 @@ import uvicorn
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import os
+import sys
 
-# --- MODÜLLERİMİZİ ÇAĞIRIYORUZ ---
 import config
 from core import audio, llm, system
 
-# (Hafıza modülünü sonra ekleyeceğiz, şimdilik yorum satırı)
-# from core import memory 
+print("🚀 Sistem Başlatılıyor...")
+try:
+    sera = llm.LLMEngine()
+except Exception as e:
+    print(f"💥 Kritik Hata: Yapay Zeka Modeli Yüklenemedi! detay: {e}")
+    sys.exit(1)
 
 app = FastAPI()
 
 @app.get("/")
 async def get():
-    # HTML Dosyasını Yükle
     template_path = os.path.join(config.BASE_DIR, "templates", "index.html")
     with open(template_path, "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
@@ -24,13 +27,14 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
     while True:
-        # Frontend'den mesaj bekle
-        data = await websocket.receive_text()
+        try:
+            data = await websocket.receive_text()
+        except Exception:
+            break
         
         if data == "start_listening":
             await websocket.send_json({"type": "info", "text": "Dinliyorum..."})
             
-            # 1. ADIM: KULAK (Duyma)
             user_text = audio.listen_mic()
             
             if user_text:
@@ -41,19 +45,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 speak_text = ""
                 text_lower = user_text.lower()
                 
-                # 2. ADIM: SİSTEM KONTROLÜ (Komut mu?)
                 
-                # Hesap Makinesi
                 if system.check_similarity(text_lower, "hesap makinesi aç"):
                     response_text = system.open_application("hesap_makinesi")
                     speak_text = response_text
                 
-                # Not Defteri
                 elif system.check_similarity(text_lower, "not defteri aç"):
                     response_text = system.open_application("notepad")
                     speak_text = response_text
                 
-                # İnternet Araması (Örn: "Python nedir ara")
                 elif "ara" in text_lower or "bul" in text_lower:
                     query = text_lower.replace("ara", "").replace("bul", "").replace("bana", "").strip()
                     if query:
@@ -61,7 +61,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         results = system.search_web(query)
                         
                         if results:
-                            # Sonuçları karta bas
                             await websocket.send_json({"type": "search_results", "data": results})
                             response_text = f"'{query}' için bulduklarım ekranda."
                             speak_text = "Bulduklarımı ekrana getirdim."
@@ -69,17 +68,14 @@ async def websocket_endpoint(websocket: WebSocket):
                             response_text = "Maalesef internette bir şey bulamadım."
                             speak_text = response_text
 
-                # 3. ADIM: BEYİN (Yapay Zeka Sohbeti)
                 else:
-                    await websocket.send_json({"type": "info", "text": "🧠 Düşünüyorum..."})
+                    await websocket.send_json({"type": "info", "text": "🧠 Sera Düşünüyor..."})
                     
-                    # Şimdilik hafızasız soruyoruz (Bir sonraki aşamada burası değişecek)
-                    llm_response = llm.ask_llm(user_text)
+                    llm_response = sera.generate_response(user_text)
                     
                     response_text = llm_response
                     speak_text = llm_response
 
-                # 4. ADIM: AĞIZ (Cevap ve Seslendirme)
                 if response_text:
                     await websocket.send_json({"type": "bot", "text": response_text})
                 
@@ -87,5 +83,5 @@ async def websocket_endpoint(websocket: WebSocket):
                     audio.speak(speak_text)
 
 if __name__ == "__main__":
-    print(f"🚀 Asistan Başlatılıyor... (Model: {config.LLM_MODEL})")
+    print(f"🌍 Web Arayüzü: http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)

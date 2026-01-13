@@ -6,3 +6,4 @@ __pycache__/
 *.mp3
 .DS_Store
 .env
+models/

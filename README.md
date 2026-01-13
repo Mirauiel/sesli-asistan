@@ -1,47 +1,84 @@
-k# 🧠 Jarvis AI Asistan (Python + Local LLM)
+# 🧠 Sera AI Asistan (Offline & Fine-Tuned)
 
-Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), sesli komutları algılayan ve Qwen 2.5 yapay zeka modelini kullanan modüler bir asistandır.
+Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), internet bağlantısına ihtiyaç duymadan (arama hariç) sohbet edebilen ve özel olarak eğitilmiş **Sera** kişiliğine sahip bir yapay zeka asistanıdır.
+
+**Ollama veya harici bir API kullanmaz.** Doğrudan PyTorch ve PEFT kütüphaneleri ile ince ayar yapılmış (Fine-Tuned) Qwen 2.5 modelini RAM üzerinde çalıştırır.
 
 ## 🚀 Özellikler
-- **Yerel LLM:** Ollama üzerinden Qwen 2.5 (3B) modeli ile Türkçe sohbet.
-- **Sesli Etkileşim:** `Faster-Whisper` ile duyma, `gTTS/mpg123` ile konuşma.
-- **Modüler Mimari:** Kolay geliştirilebilir parça parça yapı (Core, Audio, LLM).
-- **Sistem Kontrolü:** Hesap makinesi açma, internet araması yapma (DuckDuckGo).
-- **Web Arayüzü:** WebSocket tabanlı modern sohbet ekranı.
+- **Tamamen Yerel (Local):** Verileriniz bilgisayarınızdan çıkmaz. `Qwen 2.5-3B` modeli işlemci (CPU) üzerinde çalışır.
+- **Özel Kişilik (Sera):** Model, LoRA (Low-Rank Adaptation) yöntemiyle eğitilmiş özel bir kişiliğe sahiptir.
+- **Sesli Etkileşim:** `Faster-Whisper` ile yüksek doğrulukta duyma, `gTTS` ile doğal konuşma.
+- **Sistem Kontrolü:** "Not defteri aç", "Hesap makinesi aç" gibi komutlarla bilgisayarı yönetme.
+- **İnternet Araması:** DuckDuckGo motoru ile internetten bilgi çekip özetleme.
+- **Web Arayüzü:** FastAPI ve WebSocket tabanlı, reaktif modern sohbet ekranı.
 
-## 📂 Proje Yapısı (Modüler)
+## 📂 Proje Yapısı
 ```text
-📁 asistan_proje/
-├── 📄 main.py          # Orkestra Şefi (Sistemi Başlatır)
-├── 📄 config.py        # Tüm Ayarlar (Model, Yollar)
-├── 📂 core/            # Sistemin Beyni ve Organları
-│   ├── 📄 llm.py       # Yapay Zeka Entegrasyonu (Ollama)
-│   ├── 📄 audio.py     # Ses İşleme (STT / TTS)
-│   ├── 📄 system.py    # PC Kontrol & Araçlar
-│   └── 📄 memory.py    # Hafıza Sistemi (Geliştirme Aşamasında)
-└── 📂 templates/       # HTML Arayüzü
+📁 Sera_Asistan/
+├── 📄 main.py            # 🧠 Ana Başlatıcı (FastAPI Sunucusu)
+├── 📄 requirements.txt   # Kütüphane Listesi
+├── 📂 core/              # Sistemin Organları
+│   ├── 📄 llm.py         # Yapay Zeka Motoru (PyTorch + PEFT)
+│   ├── 📄 audio.py       # Kulak ve Ağız (STT / TTS)
+│   └── 📄 system.py      # Refleksler (PC Kontrol & Arama)
+├── 📂 models/            # ⚠️ Model Dosyaları (GitHub'da Yoktur)
+│   └── 📂 sera_adapter/  # Eğitilmiş LoRA Adaptör Dosyaları
+└── 📂 templates/         # HTML Arayüzü
+```
 
+🛠️ Kurulum
 
-🛠️ Kurulum & Çalıştırma
+1. Projeyi Klonlayın
 
-1 - Gereksinimleri Yükle:
+git clone [https://github.com/KULLANICI_ADIN/sesli-asistan.git](https://github.com/KULLANICI_ADIN/sesli-asistan.git)
+
+cd sesli-asistan
+
+2. Sanal Ortamı Kurun (Önemli)
+
+python3 -m venv venv
+
+source venv/bin/activate  # Linux/Mac
+
+# venv\Scripts\activate   # Windows
+
+3. Gereksinimleri Yükleyin
+
+Önemli: PyTorch'un CPU sürümünü kurmak için önce şu komutu çalıştırın:
+
+pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu)
+
+Ardından diğer gereksinimleri kurun:
 
 pip install -r requirements.txt
 
-sudo apt install portaudio19-dev mpg123
+4. Sistem Araçlarını Yükleyin (Linux için)
 
-2 - Ollama Motorunu Başlat:
+Ses çalma ve işleme için gereklidir:
 
-ollama serve
+sudo apt update
 
-3 - Asistanı Çalıştır:
+sudo apt install mpg123 portaudio19-dev -y
+
+5. Model Dosyası
+
+Bu proje Qwen2.5-3B-Instruct temel modelini ve Sera Adaptörünü kullanır.
+
+İlk çalıştırmada Temel Model (Base Model) otomatik indirilir.
+
+Sera Adaptörü (models/sera_adapter) ise özel eğitim dosyasıdır. (Kendi adaptörünüzü models klasörüne koymalısınız).
+
+Çalıştırma
 
 python3 main.py
 
-⚠️ Gereksinimler
+Tarayıcıdan http://localhost:8000 adresine gidin ve mikrofon butonuna basın.
 
-Linux (Tercihen Ubuntu/Pop!_OS)
+Gereksinimler
 
-Python 3.10+
+OS: Linux (Ubuntu/Pop!_OS önerilir) veya Windows.
 
-Min 8GB RAM (Qwen 2.5 için)
+RAM: Minimum 8GB (CPU Modu için).
+
+Python: 3.10 ve üzeri.
+
