@@ -30,7 +30,7 @@ Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), internet bağla
 
 1. Projeyi Klonlayın
 
-git clone [https://github.com/KULLANICI_ADIN/sesli-asistan.git](https://github.com/KULLANICI_ADIN/sesli-asistan.git)
+git clone [https://github.com/Mirauiel/sesli-asistan.git](https://github.com/Mirauiel/sesli-asistan.git)
 
 cd sesli-asistan
 
