@@ -3,13 +3,13 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import os
 import sys
-
 import config
-from core import audio, llm, system
+from core import audio, llm, system, memory
 
 print("🚀 Sistem Başlatılıyor...")
 try:
     sera = llm.LLMEngine()
+    hafiza = memory.MemorySystem()
 except Exception as e:
     print(f"💥 Kritik Hata: Yapay Zeka Modeli Yüklenemedi! detay: {e}")
     sys.exit(1)
@@ -45,7 +45,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 speak_text = ""
                 text_lower = user_text.lower()
                 
-                
+                # --- KOMUT KONTROLLERİ ---
                 if system.check_similarity(text_lower, "hesap makinesi aç"):
                     response_text = system.open_application("hesap_makinesi")
                     speak_text = response_text
@@ -71,7 +71,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 else:
                     await websocket.send_json({"type": "info", "text": "🧠 Sera Düşünüyor..."})
                     
-                    llm_response = sera.generate_response(user_text)
+                    context_data = hafiza.get_context(limit=6)
+                    
+                    llm_response = sera.generate_response(user_text, context=context_data)
+                    
+                    hafiza.add_message("user", user_text)
+                    hafiza.add_message("bot", llm_response)
                     
                     response_text = llm_response
                     speak_text = llm_response
@@ -85,3 +90,4 @@ async def websocket_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     print(f"🌍 Web Arayüzü: http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
