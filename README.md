@@ -25,6 +25,13 @@ Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), internet bağla
 │   └── 📂 sera_adapter/  # Eğitilmiş LoRA Adaptör Dosyaları
 └── 📂 templates/         # HTML Arayüzü
 ```
+## ⚠️ Önemli Not (Model Dosyası)
+Bu proje, çalışmak için özel eğitilmiş **Sera Adapter** modeline ihtiyaç duyar.
+Model dosyaları boyut sınırları nedeniyle bu repoya eklenmemiştir.
+
+Geliştirme süreci devam etmektedir. Modelin son hali hazır olduğunda Hugging Face üzerinden paylaşılacaktır.
+Şu an çalıştırmak için kendi `adapter_model.safetensors` dosyanızı `models/sera_adapter/` klasörüne koymanız gerekir.
+
 
 🛠️ Kurulum
 
