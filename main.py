@@ -3,6 +3,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import os
 import sys
+import json
 import config
 from core import audio, llm, system, memory
 
@@ -11,10 +12,12 @@ try:
     sera = llm.LLMEngine()
     hafiza = memory.MemorySystem()
 except Exception as e:
-    print(f"💥 Kritik Hata: Yapay Zeka Modeli Yüklenemedi! detay: {e}")
+    print(f"💥 Kritik Hata: {e}")
     sys.exit(1)
 
 app = FastAPI()
+
+SES_ACIK = True
 
 @app.get("/")
 async def get():
@@ -25,69 +28,73 @@ async def get():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    global SES_ACIK
     
     while True:
         try:
-            data = await websocket.receive_text()
-        except Exception:
-            break
-        
-        if data == "start_listening":
-            await websocket.send_json({"type": "info", "text": "Dinliyorum..."})
+            raw_data = await websocket.receive_text()
             
-            user_text = audio.listen_mic()
-            
-            if user_text:
-                print(f"👤 Kullanıcı: {user_text}")
-                await websocket.send_json({"type": "user", "text": user_text})
+            try:
+                data = json.loads(raw_data)
+            except:
+                data = {"type": "command", "action": raw_data}
+
+            if data.get("type") == "config":
+                SES_ACIK = data.get("voice_active", True)
+                durum = "Açık" if SES_ACIK else "Kapalı"
+                print(f"🔊 Ses Durumu: {durum}")
+                continue
+
+            if data.get("type") == "command" and data.get("action") == "start_listening":
+                await websocket.send_json({"type": "info", "text": "Dinliyorum..."})
                 
-                response_text = ""
-                speak_text = ""
-                text_lower = user_text.lower()
+                user_text = audio.listen_mic()
                 
-                # --- KOMUT KONTROLLERİ ---
-                if system.check_similarity(text_lower, "hesap makinesi aç"):
-                    response_text = system.open_application("hesap_makinesi")
-                    speak_text = response_text
-                
-                elif system.check_similarity(text_lower, "not defteri aç"):
-                    response_text = system.open_application("notepad")
-                    speak_text = response_text
-                
-                elif "ara" in text_lower or "bul" in text_lower:
-                    query = text_lower.replace("ara", "").replace("bul", "").replace("bana", "").strip()
-                    if query:
-                        await websocket.send_json({"type": "info", "text": "🔎 İnternette aranıyor..."})
-                        results = system.search_web(query)
+                if user_text:
+                    print(f"👤 Kullanıcı: {user_text}")
+                    await websocket.send_json({"type": "user", "text": user_text})
+                    
+                    response_text = ""
+                    text_lower = user_text.lower()
+                    
+                    if "not defteri" in text_lower:
+                        response_text = system.open_application("notepad")
+                    
+                    elif "hesap makinesi" in text_lower:
+                        response_text = system.open_application("hesap_makinesi")
+
+                    elif "ara" in text_lower or "bul" in text_lower:
+                        query = text_lower.replace("ara", "").replace("bul", "").replace("bana", "").replace("internette", "").strip()
                         
-                        if results:
-                            await websocket.send_json({"type": "search_results", "data": results})
-                            response_text = f"'{query}' için bulduklarım ekranda."
-                            speak_text = "Bulduklarımı ekrana getirdim."
+                        if query:
+                            await websocket.send_json({"type": "info", "text": f"🔎 '{query}' aranıyor..."})
+                            results = system.search_web(query)
+                            
+                            if results:
+                                await websocket.send_json({"type": "search_results", "data": results})
+                                response_text = f"İnternette '{query}' hakkında bunları buldum."
+                            else:
+                                response_text = "Maalesef internette ilgili bir sonuç bulamadım."
                         else:
-                            response_text = "Maalesef internette bir şey bulamadım."
-                            speak_text = response_text
+                            response_text = "Ne aramam gerektiğini anlamadım."
 
-                else:
-                    await websocket.send_json({"type": "info", "text": "🧠 Sera Düşünüyor..."})
-                    
-                    context_data = hafiza.get_context(limit=6)
-                    
-                    llm_response = sera.generate_response(user_text, context=context_data)
-                    
-                    hafiza.add_message("user", user_text)
-                    hafiza.add_message("bot", llm_response)
-                    
-                    response_text = llm_response
-                    speak_text = llm_response
+                    else:
+                        await websocket.send_json({"type": "info", "text": "🧠 Düşünüyor..."})
+                        context_data = hafiza.get_context(limit=6)
+                        response_text = sera.generate_response(user_text, context=context_data)
+                        
+                        hafiza.add_message("user", user_text)
+                        hafiza.add_message("bot", response_text)
 
-                if response_text:
-                    await websocket.send_json({"type": "bot", "text": response_text})
-                
-                if speak_text:
-                    audio.speak(speak_text)
+                    if response_text:
+                        await websocket.send_json({"type": "bot", "text": response_text})
+                    
+                    if response_text and SES_ACIK:
+                        audio.speak(response_text)
+
+        except Exception as e:
+            print(f"Hata: {e}")
+            break
 
 if __name__ == "__main__":
-    print(f"🌍 Web Arayüzü: http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-

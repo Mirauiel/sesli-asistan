@@ -3,34 +3,41 @@ import speech_recognition as sr
 from faster_whisper import WhisperModel
 import threading
 import sys
-import asyncio
-import edge_tts
+import subprocess
 from ctypes import *
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
-# --- ALSA HATALARINI GİZLEME BLOĞU (LİNUX İÇİN) ---
-# Bu blok, terminali kirleten "ALSA lib pcm.c..." hatalarını susturur.
-# Eğer kütüphane bulunamazsa program çökmez, sadece susturma özelliği devre dışı kalır.
+# --- ALSA HATALARINI GİZLEME (LİNUX İÇİN) ---
+# Bu blok terminaldeki gereksiz kırmızı yazıları engeller
 try:
     ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
     def py_error_handler(filename, line, function, err, fmt):
         pass
     c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
-    
     try:
         asound = cdll.LoadLibrary('libasound.so.2')
     except OSError:
         asound = cdll.LoadLibrary('libasound.so')
-        
     asound.snd_lib_error_set_handler(c_error_handler)
 except Exception:
     pass
 
 print("📥 Whisper Modeli yükleniyor...")
-model = WhisperModel(config.WHISPER_MODEL_SIZE, device=config.WHISPER_DEVICE, compute_type=config.WHISPER_COMPUTE)
-print("✅ Whisper (Kulak) Hazır!")
+
+try:
+    model = WhisperModel(
+        config.WHISPER_MODEL_SIZE, 
+        device=config.WHISPER_DEVICE, 
+        compute_type=config.WHISPER_COMPUTE,
+        download_root=None,
+        local_files_only=True
+    )
+    print("✅ Whisper (Kulak) Hazır! (Offline Mod)")
+except Exception as e:
+    print(f"⚠️ HATA: Model bulunamadı! İlk kez çalıştırıyorsan 'local_files_only=False' yapman gerekebilir. Hata: {e}")
+    model = WhisperModel(config.WHISPER_MODEL_SIZE, device=config.WHISPER_DEVICE, compute_type=config.WHISPER_COMPUTE)
 
 def listen_mic():
     r = sr.Recognizer()
@@ -53,26 +60,51 @@ def listen_mic():
         except Exception:
             return None
 
-async def generate_audio(text, output_file):
-    communicate = edge_tts.Communicate(text, "tr-TR-NeslihanNeural")
-    await communicate.save(output_file)
+def piper_speak(text, output_file):
+    """
+    Piper TTS kullanarak tamamen offline ses üretir.
+    DFKI (tr_TR-dfki-medium.onnx) modelini kullanır.
+    """
+    piper_binary = os.path.join(config.BASE_DIR, "piper_tts", "piper", "piper")
+    
+    model_path = os.path.join(config.BASE_DIR, "piper_tts", "tr_TR-dfki-medium.onnx")
+    
+    if not os.path.exists(piper_binary):
+        print(f"❌ HATA: Piper programı bulunamadı: {piper_binary}")
+        return
+    if not os.path.exists(model_path):
+        print(f"❌ HATA: Ses modeli bulunamadı: {model_path}")
+        return
 
-def speak_thread(text):
     try:
-        output_file = os.path.join(config.BASE_DIR, "yanit.mp3")
+        command = [
+            piper_binary,
+            "--model", model_path,
+            "--output_file", output_file
+        ]
         
-        if os.path.exists(output_file):
-            os.remove(output_file)
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(generate_audio(text, output_file))
-        loop.close()
-        
-        os.system(f"mpg123 -q --buffer 1024 {output_file}")
+        process = subprocess.Popen(command, stdin=subprocess.PIPE)
+        process.communicate(input=text.encode('utf-8'))
         
     except Exception as e:
-        print(f"🔊 Ses Hatası: {e}")
+        print(f"⚠️ Piper Hatası: {e}")
+
+def speak_thread(text):
+    output_file = os.path.join(config.BASE_DIR, "yanit.wav")
+    
+    if os.path.exists(output_file):
+        os.remove(output_file)
+
+    try:
+        piper_speak(text, output_file)
+        
+        if os.path.exists(output_file):
+            os.system(f"aplay -q {output_file}")
+        else:
+            print("❌ Ses dosyası oluşturulamadı.")
+            
+    except Exception as e:
+        print(f"🔊 Ses Oynatma Hatası: {e}")
 
 def speak(text):
     t = threading.Thread(target=speak_thread, args=(text,), daemon=True)

@@ -3,32 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sesli Asistan v1.0</title>
+    <title>Sera AI v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Kaydırma çubuğu özelleştirmesi */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #374151; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
 </head>
 <body class="bg-gray-900 text-white h-screen flex flex-col items-center justify-center font-sans">
 
-    <div class="w-full max-w-2xl bg-gray-800 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+    <div class="w-full max-w-3xl bg-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[85vh] border border-gray-700">
         
-        <div class="bg-indigo-600 p-4 text-center font-bold text-xl shadow-md">
-            Yapay Zeka Asistanı
+        <div class="bg-indigo-600 p-4 flex justify-between items-center shadow-lg z-10">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-robot text-2xl"></i>
+                <span class="font-bold text-xl tracking-wide">Sera AI</span>
+            </div>
+            <div class="text-xs text-indigo-200 bg-indigo-700 px-2 py-1 rounded">v2.0 / Offline</div>
         </div>
 
-        <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-700">
+        <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-900/50">
             <div class="flex justify-start">
-                <div class="bg-gray-600 p-3 rounded-lg rounded-tl-none max-w-xs">
-                    Merhaba Utku! Seni dinlemeye hazırım.
+                <div class="bg-gray-700 p-4 rounded-2xl rounded-tl-none max-w-md shadow-md border border-gray-600">
+                    <p class="text-gray-200">Selam Utku! Ben Sera. Arama yapabilirim, sohbet edebilirim.</p>
                 </div>
             </div>
         </div>
 
-        <div class="p-4 bg-gray-800 border-t border-gray-600 flex justify-center items-center">
-            <button id="listen-btn" onclick="toggleListening()" 
-                class="bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all transform hover:scale-105">
-                <i class="fas fa-microphone text-2xl"></i>
-            </button>
-            <p id="status-text" class="ml-4 text-gray-400 text-sm">Dokun ve Konuş...</p>
+        <div class="p-6 bg-gray-800 border-t border-gray-700 flex flex-col items-center gap-4 relative">
+            
+            <p id="status-text" class="text-indigo-400 text-sm font-medium h-5">Dokun ve Konuş...</p>
+
+            <div class="flex items-center gap-8">
+                <button id="voice-btn" onclick="toggleVoice()" 
+                    class="bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all border border-gray-600"
+                    title="Sesi Aç/Kapat">
+                    <i id="voice-icon" class="fas fa-volume-up text-xl"></i>
+                </button>
+
+                <button id="listen-btn" onclick="toggleListening()" 
+                    class="bg-rose-600 hover:bg-rose-500 text-white rounded-full w-20 h-20 flex items-center justify-center shadow-xl transition-all transform hover:scale-105 border-4 border-gray-800 ring-4 ring-rose-600/30">
+                    <i class="fas fa-microphone text-3xl"></i>
+                </button>
+
+                <button class="bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all border border-gray-600 cursor-not-allowed opacity-50">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -36,66 +61,93 @@
         const ws = new WebSocket("ws://localhost:8000/ws");
         const chatBox = document.getElementById("chat-box");
         const statusText = document.getElementById("status-text");
-        const btn = document.getElementById("listen-btn");
+        const listenBtn = document.getElementById("listen-btn");
+        let isVoiceOn = true;
 
-	// Mesaj Geldiğinde (Güncellenmiş Tam Kod)
-            ws.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                const chatBox = document.getElementById("chat-box");
+        // Ses Butonu Fonksiyonu
+        function toggleVoice() {
+            isVoiceOn = !isVoiceOn;
+            const icon = document.getElementById("voice-icon");
+            const btn = document.getElementById("voice-btn");
 
-                // 1. Kullanıcı Mesajı
-                if (data.type === "user") {
-                    chatBox.innerHTML += `<div class="message user-message">${data.text}</div>`;
-                } 
-                // 2. Bot Mesajı
-                else if (data.type === "bot") {
-                    chatBox.innerHTML += `<div class="message bot-message">${data.text}</div>`;
-                } 
-                // 3. Bilgi Mesajı (Dinliyorum...)
-		else if (data.type === "info") {
-			const statusText = document.getElementById("status-text"); // DOĞRUSU BU
-			statusText.innerText = data.text;
-			statusText.classList.add("text-yellow-400"); // Tailwind rengi kullanalım
-
-			setTimeout(() => {
-				statusText.innerText = "Dokun ve Konuş...";
-				statusText.classList.remove("text-yellow-400");
-			}, 3000);
-		}
-                // 4. Arama Sonuçları (YENİ KART TASARIMI)
-                else if (data.type === "search_results") {
-                    let cardsHtml = '<div class="search-container" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';
-                    
-                    data.data.forEach(item => {
-                        cardsHtml += `
-                            <div class="search-card" style="background:#2c3e50; padding:10px; border-radius:8px; width:100%; max-width:250px; border:1px solid #34495e;">
-                                <h4 style="margin:0 0 5px 0; color:#3498db; font-size:14px;">${item.title}</h4>
-                                <p style="font-size:11px; color:#bdc3c7; margin-bottom:5px;">${item.desc ? item.desc.substring(0, 60) + '...' : 'Açıklama yok'}</p>
-                                <a href="${item.url}" target="_blank" style="color:#2ecc71; text-decoration:none; font-size:12px; font-weight:bold;">🔗 Siteye Git</a>
-                            </div>
-                        `;
-                    });
-                    
-                    cardsHtml += '</div>';
-                    chatBox.innerHTML += cardsHtml;
-                }
-
-                // Otomatik aşağı kaydır
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
-
-        function toggleListening() {
-            btn.classList.add("animate-pulse");
-            statusText.innerText = "Dinleniyor...";
-            ws.send("start_listening");
+            if (isVoiceOn) {
+                icon.className = "fas fa-volume-up text-xl";
+                btn.classList.remove("text-red-400");
+                btn.classList.add("text-gray-300");
+            } else {
+                icon.className = "fas fa-volume-mute text-xl";
+                btn.classList.remove("text-gray-300");
+                btn.classList.add("text-red-400");
+            }
+            ws.send(JSON.stringify({type: "config", voice_active: isVoiceOn}));
         }
 
-        function addMessage(text, align, color) {
-            const div = document.createElement("div");
-            div.className = `flex justify-${align}`;
-            div.innerHTML = `<div class="bg-${color} p-3 rounded-lg text-white max-w-xs shadow-md">${text}</div>`;
-            chatBox.appendChild(div);
+        // WebSocket Mesajları
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            // 1. KULLANICI MESAJI
+            if (data.type === "user") {
+                chatBox.innerHTML += `
+                    <div class="flex justify-end animate-fade-in">
+                        <div class="bg-indigo-600 p-3 rounded-2xl rounded-tr-none text-white max-w-md shadow-lg">
+                            ${data.text}
+                        </div>
+                    </div>`;
+            } 
+            // 2. BOT MESAJI
+            else if (data.type === "bot") {
+                chatBox.innerHTML += `
+                    <div class="flex justify-start animate-fade-in">
+                        <div class="bg-gray-700 p-3 rounded-2xl rounded-tl-none text-gray-200 max-w-md shadow-md border border-gray-600">
+                            ${data.text}
+                        </div>
+                    </div>`;
+            } 
+            // 3. ARAMA SONUÇLARI (KARTLAR - GERİ GELDİ)
+            else if (data.type === "search_results") {
+                let cardsHtml = '<div class="flex gap-4 overflow-x-auto pb-4 mt-2 snap-x">';
+                
+                data.data.forEach(item => {
+                    cardsHtml += `
+                        <div class="flex-none w-64 bg-gray-800 p-4 rounded-xl border border-gray-600 shadow-lg snap-center hover:border-indigo-500 transition-colors">
+                            <h4 class="text-indigo-400 font-bold text-sm mb-2 line-clamp-2">${item.title}</h4>
+                            <p class="text-xs text-gray-400 mb-3 line-clamp-3">${item.desc ? item.desc : 'Açıklama yok'}</p>
+                            <a href="${item.url}" target="_blank" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-external-link-alt"></i> Siteye Git
+                            </a>
+                        </div>
+                    `;
+                });
+                cardsHtml += '</div>';
+                
+                chatBox.innerHTML += `
+                    <div class="flex flex-col gap-2 animate-fade-in">
+                        <span class="text-xs text-gray-500 ml-2">İnternet Sonuçları:</span>
+                        ${cardsHtml}
+                    </div>`;
+            }
+            // 4. BİLGİ MESAJI
+            else if (data.type === "info") {
+                statusText.innerText = data.text;
+                statusText.classList.add("text-indigo-400", "animate-pulse");
+                
+                // 3 saniye sonra eski haline dön
+                setTimeout(() => {
+                    statusText.innerText = "Dokun ve Konuş...";
+                    statusText.classList.remove("text-indigo-400", "animate-pulse");
+                    listenBtn.classList.remove("ring-4", "ring-rose-600/30"); // Efekti kapat
+                }, 3000);
+            }
+            
+            // Otomatik aşağı kaydır
             chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+        function toggleListening() {
+            listenBtn.classList.add("ring-4", "ring-rose-600/50"); // Efekt ekle
+            statusText.innerText = "Dinleniyor...";
+            ws.send(JSON.stringify({type: "command", action: "start_listening"}));
         }
     </script>
 </body>

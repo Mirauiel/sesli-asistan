@@ -1,91 +1,73 @@
-# 🧠 Sera AI Asistan (Offline & Fine-Tuned)
+# Sera AI v2.0 - Tamamen Offline Linux Asistanı
 
-Bu proje, tamamen yerel donanım üzerinde çalışan (Offline), internet bağlantısına ihtiyaç duymadan (arama hariç) sohbet edebilen ve özel olarak eğitilmiş **Sera** kişiliğine sahip bir yapay zeka asistanıdır.
+Bu proje, **Pop!_OS (Linux)** sistemleri için optimize edilmiş, gizlilik odaklı ve **tamamen yerel (offline)** çalışabilen bir yapay zeka asistanıdır.
 
-**Ollama veya harici bir API kullanmaz.** Doğrudan PyTorch ve PEFT kütüphaneleri ile ince ayar yapılmış (Fine-Tuned) Qwen 2.5 modelini RAM üzerinde çalıştırır.
+İnternet bağlantısına ihtiyaç duymaz. Sesinizi **Whisper** ile duyar, **Qwen** ile düşünür ve **Piper TTS** ile konuşur.
 
 ## 🚀 Özellikler
-- **Tamamen Yerel (Local):** Verileriniz bilgisayarınızdan çıkmaz. `Qwen 2.5-3B` modeli işlemci (CPU) üzerinde çalışır.
-- **Özel Kişilik (Sera):** Model, LoRA (Low-Rank Adaptation) yöntemiyle eğitilmiş özel bir kişiliğe sahiptir.
-- **Sesli Etkileşim:** `Faster-Whisper` ile yüksek doğrulukta duyma, `gTTS` ile doğal konuşma.
-- **Sistem Kontrolü:** "Not defteri aç", "Hesap makinesi aç" gibi komutlarla bilgisayarı yönetme.
-- **İnternet Araması:** DuckDuckGo motoru ile internetten bilgi çekip özetleme.
-- **Web Arayüzü:** FastAPI ve WebSocket tabanlı, reaktif modern sohbet ekranı.
+
+* **🧠 %100 Yerel Zeka (GGUF):** `llama.cpp` altyapısıyla `Qwen 2.5` modelini doğrudan RAM üzerinde çalıştırır.
+* **🗣️ Offline Ses (Piper):** Nöral metin okuma motoru **Piper** ve `dfki-medium` modeli ile akıcı Türkçe konuşma sağlar. (İnternet gerektirmez).
+* **👂 Hızlı Duyma:** `faster-whisper` altyapısı ile anlık Türkçe ses tanıma.
+* **🐧 Linux Entegrasyonu:** `aplay` ile ses çalar, terminal komutlarını yönetir.
+* **🌐 Web Arayüzü:** FastAPI ve WebSocket tabanlı sohbet ekranı.
 
 ## 📂 Proje Yapısı
+
 ```text
-📁 Sera_Asistan/
-├── 📄 main.py            # 🧠 Ana Başlatıcı (FastAPI Sunucusu)
+Sera_AI/
+├── 📄 main.py            # 🚀 Ana Başlatıcı
+├── 📄 config.py          # Ayar Dosyası
 ├── 📄 requirements.txt   # Kütüphane Listesi
+├── 📄 dataset.jsonl      # 💎 Karakter Eğitimi İçin Özgün Veri Seti
 ├── 📂 core/              # Sistemin Organları
-│   ├── 📄 llm.py         # Yapay Zeka Motoru (PyTorch + PEFT)
-│   ├── 📄 audio.py       # Kulak ve Ağız (STT / TTS)
-│   └── 📄 system.py      # Refleksler (PC Kontrol & Arama)
-├── 📂 models/            # ⚠️ Model Dosyaları (GitHub'da Yoktur)
-│   └── 📂 sera_adapter/  # Eğitilmiş LoRA Adaptör Dosyaları
-└── 📂 templates/         # HTML Arayüzü
-```
-## ⚠️ Önemli Not (Model Dosyası)
-Bu proje, çalışmak için özel eğitilmiş **Sera Adapter** modeline ihtiyaç duyar.
-Model dosyaları boyut sınırları nedeniyle bu repoya eklenmemiştir.
-
-Geliştirme süreci devam etmektedir. Modelin son hali hazır olduğunda Hugging Face üzerinden paylaşılacaktır.
-Şu an çalıştırmak için kendi `adapter_model.safetensors` dosyanızı `models/sera_adapter/` klasörüne koymanız gerekir.
-
-
+│   ├── 📄 llm.py         # Zeka Motoru (Llama-cpp-python)
+│   ├── 📄 audio.py       # Ses İşleme (Whisper + Piper TTS)
+│   └── 📄 system.py      # Refleksler
+│   └── 📄 memory.py      # Hafıza (SQLite)
+├── 📂 models/            # 🧠 Yapay Zeka Modelleri (GGUF)
+│   └── 📄 sera_v2.gguf   # (Bu dosyayı indirmeniz gerekir)
+├── 📂 piper_tts/         # 🗣️ Ses Modelleri ve Piper Motoru
+│   ├── 📂 piper/         # Piper Binary dosyaları
+│   └── 📄 tr_TR-dfki-medium.onnx  # Türkçe Ses Modeli
+└── 📂 templates/         # HTML/JS Arayüzü
+    └── 📄 index.html
+    
 🛠️ Kurulum
 
 1. Projeyi Klonlayın
+git clone [https://github.com/Mirauiel/sera-ai.git](https://github.com/Mirauiel/sera-ai.git)
+cd sera-ai
 
-git clone [https://github.com/Mirauiel/sesli-asistan.git](https://github.com/Mirauiel/sesli-asistan.git)
-
-cd sesli-asistan
-
-2. Sanal Ortamı Kurun (Önemli)
-
+2. Sanal Ortamı Kurun
 python3 -m venv venv
+source venv/bin/activate
 
-source venv/bin/activate  # Linux/Mac
+3. Sistem Gereksinimleri (Linux)
+Whisper ve ses çalma için gereklidir:
+sudo apt update
+sudo apt install ffmpeg portaudio19-dev alsa-utils -y
 
-# venv\Scripts\activate   # Windows
-
-3. Gereksinimleri Yükleyin
-
-Önemli: PyTorch'un CPU sürümünü kurmak için önce şu komutu çalıştırın:
-
-pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu)
-
-Ardından diğer gereksinimleri kurun:
-
+4. Python Kütüphanelerini Yükleyin
 pip install -r requirements.txt
 
-4. Sistem Araçlarını Yükleyin (Linux için)
+5. Modelleri Yerleştirin (ÖNEMLİ)
+Sistemin çalışması için aşağıdaki dosya yapısını oluşturmalısınız:
 
-Ses çalma ve işleme için gereklidir:
+A. LLM Modeli: models/ klasörüne sera_v2.gguf dosyasını koyun.
 
-sudo apt update
+B. Piper TTS (Ses Motoru): piper_tts/ klasörü içine şunları indirin:
 
-sudo apt install mpg123 portaudio19-dev -y
+  1. Piper Binary: Linux için Piper binary dosyalarını piper_tts/piper/ klasörüne çıkarın.
+  2. Ses Modeli: tr_TR-dfki-medium.onnx ve .json dosyasını piper_tts/ ana dizinine koyun.
 
-5. Model Dosyası
-
-Bu proje Qwen2.5-3B-Instruct temel modelini ve Sera Adaptörünü kullanır.
-
-İlk çalıştırmada Temel Model (Base Model) otomatik indirilir.
-
-Sera Adaptörü (models/sera_adapter) ise özel eğitim dosyasıdır. (Kendi adaptörünüzü models klasörüne koymalısınız).
-
-Çalıştırma
-
+Klasör yapısı şöyle görünmelidir:  
+piper_tts/
+  ├── tr_TR-dfki-medium.onnx
+  ├── tr_TR-dfki-medium.onnx.json
+  └── piper/
+       └── piper (çalıştırılabilir dosya)
+       
+🚀 Çalıştırma
 python3 main.py
-
-Tarayıcıdan http://localhost:8000 adresine gidin ve mikrofon butonuna basın.
-
-Gereksinimler
-
-OS: Linux (Ubuntu/Pop!_OS önerilir) veya Windows.
-
-RAM: Minimum 8GB (CPU Modu için).
-
-Python: 3.10 ve üzeri.
-
+Tarayıcınızda http://localhost:8000 adresine gidin.
